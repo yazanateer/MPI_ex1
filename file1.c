@@ -5,40 +5,38 @@
 
 int main(int argc, char* argv[]){
 
-	int x, y;
-	int rank; //rank of proc
-	int num_proc; //num of proc 
-	MPI_Status status; //status of the receive
-	int* arr = NULL;
-	int size = 100000;
-	int range = 20;
-	int chunk, result;
-	int i;
-	
-	
-	MPI_Init(&argc,&argv);
+	int rank, size;
+	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
-	
-	if( rank == 0 ){
-	 arr = (int*) malloc(size* sizeof(int));
-	 if(arr = NULL) {
-	 	printf("Error to allocate the memory \n");
-	 	MPI_Abort(MPI_COMM_WORLD, __LINE__);
-	 }
-	 srand(time(NULL));
-	 
-	 for(i =0;i<size;i++)
-	 	arr[i] = -range/2 + rand() % range;
-	 	
-	 	
-	 for(i=0; i,num_proc; i++)
-	 	MPI_Send(arr + i * chunk, chunk , MPI_INT, i + 1, MPI_COMM_WORLD);	
-	 	
-	 
-	
-	}
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+	printf("the process %d of %d, My rank is %d\n",rank, size, rank);
+	
+	int recv_data , send_data;
+	send_data = 15;
+	
+	if (rank == 0) {
+		MPI_Send(&send_data, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+		printf("Process %d send this msg: %d\n", rank, send_data);
+		
+		//now this process will receive a data from the second process so we will defien the recv
+		MPI_Recv(&recv_data, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		printf("Process %d received this msg: %d\n", rank, recv_data);
+	} else{
+		MPI_Recv(&recv_data, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); //now the process 1 get the msg from proc 0
+		printf("Process %d received msg: %d\n", rank, recv_data);
+		
+		int num = rand() % 10 + 1;
+		recv_data *=num;
+		
+		MPI_Send(&recv_data, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+		printf("Process %d, send the msg: %d\n", rank, recv_data);
+		
+	}
+	
+	
+	MPI_Finalize();
+	return 0;
 
 }
 
