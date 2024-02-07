@@ -1,43 +1,57 @@
-#include "mpi.h"
+
 #include <stdio.h>
-#include <stdlib.h>
+#include <math.h>
 
+#define HEAVY  1000
+#define SIZE   60
 
-int main(int argc, char* argv[]){
-
-	int rank, size;
-	MPI_Init(&argc, &argv);
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-	printf("the process %d of %d, My rank is %d\n",rank, size, rank);
+// This function performs heavy computations, 
+// its run time depends on x and y values
+// DO NOT change the function
+double heavy(int x, int y) {
+	int i, loop;
+	double sum = 0;
 	
-	int recv_data , send_data;
-	send_data = 15;
-	
-	if (rank == 0) {
-		MPI_Send(&send_data, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-		printf("Process %d send this msg: %d\n", rank, send_data);
-		
-		//now this process will receive a data from the second process so we will defien the recv
-		MPI_Recv(&recv_data, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		printf("Process %d received this msg: %d\n", rank, recv_data);
-	} else{
-		MPI_Recv(&recv_data, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); //now the process 1 get the msg from proc 0
-		printf("Process %d received msg: %d\n", rank, recv_data);
-		
-		int num = rand() % 10 + 1;
-		recv_data *=num;
-		
-		MPI_Send(&recv_data, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-		printf("Process %d, send the msg: %d\n", rank, recv_data);
-		
-	}
-	
-	
-	MPI_Finalize();
-	return 0;
+	if (x > 0.25*SIZE &&  x < 0.5*SIZE && y > 0.4 * SIZE && y < 0.6 * SIZE)
+		loop = x * y;
+	else
+		loop = y + x;
 
+	for (i = 0; i < loop * HEAVY; i++)
+		sum += cos(exp(sin((double)i / HEAVY)));
+
+	return  sum;
 }
 
+// Sequencial code to be parallelized
+int main(int argc, char* argv[]) {
+	int x, y;
+	int size = SIZE;
+	double answer = 0;
+	
+	int rank, numP; // the rank of the current process and the number of processor 
 
+
+	MPI_INIT(&argc,&argv);
+	MPI_Comm_size(MPI_COMM_WORLD, &numP);
+	MPI_Comm_rank(MPI_COMM_WORLD, &size);
+	
+	
+	int chunks, start, end;
+	double current_answer = 0;
+	
+	chunks = size / numP;
+	start = rank * chunks;
+	end = start + chunks;
+	
+	for(x= start;x<end;x++)
+	   for(y=start;y<end;y++)
+	   	current_answer+= heavy(x,y);
+	   	MPI_Reduce(&current_answer, &answer, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	
+	
+
+	printf("answer = %e\n", answer);
+	
+	MPI_FINALIZE(
+}
